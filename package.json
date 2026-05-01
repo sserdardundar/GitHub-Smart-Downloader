@@ -1,0 +1,24 @@
+{
+  "name": "github-repository-downloader",
+  "version": "2.2.0",
+  "description": "Download GitHub repositories or specific directories as ZIP files",
+  "scripts": {
+    "test": "jest",
+    "lint": "node --check js/background.js js/contentScript.js js/offscreen.js js/popup.js js/settings.js js/shared.js tests/unit.test.js",
+    "package": "git archive --format=zip -o github-smart-downloader-extension.zip HEAD"
+  },
+  "keywords": [
+    "github",
+    "download",
+    "zip",
+    "extension",
+    "chrome"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "jszip": "^3.10.1"
+  }
+}

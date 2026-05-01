@@ -1,0 +1,1076 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Settings - GitHub Smart Downloader</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --gd-bg: #0d1117;
+        --gd-surface: rgba(22, 27, 34, 0.7);
+        --gd-surface-opaque: #161b22;
+        --gd-surface-alt: rgba(33, 38, 45, 0.5);
+        --gd-border: rgba(48, 54, 61, 0.8);
+        --gd-text: #c9d1d9;
+        --gd-muted: #8b949e;
+        --gd-accent: #8b5cf6;
+        --gd-accent-hover: #7c3aed;
+        --gd-danger: #f85149;
+        --gd-focus: #58a6ff;
+        --gd-glass-blur: 12px;
+      }
+
+      @media (prefers-color-scheme: light) {
+        :root {
+          color-scheme: light;
+          --gd-bg: #f6f8fa;
+          --gd-surface: rgba(255, 255, 255, 0.7);
+          --gd-surface-opaque: #ffffff;
+          --gd-surface-alt: rgba(246, 248, 250, 0.6);
+          --gd-border: rgba(208, 215, 222, 0.8);
+          --gd-text: #24292f;
+          --gd-muted: #57606a;
+          --gd-accent: #7c3aed;
+          --gd-accent-hover: #6d28d9;
+          --gd-danger: #cf222e;
+          --gd-focus: #0969da;
+          --gd-glass-blur: 12px;
+        }
+      }
+
+      html[data-theme="dark"] {
+        color-scheme: dark;
+        --gd-bg: #0d1117;
+        --gd-surface: rgba(22, 27, 34, 0.7);
+        --gd-surface-opaque: #161b22;
+        --gd-surface-alt: rgba(33, 38, 45, 0.5);
+        --gd-border: rgba(48, 54, 61, 0.8);
+        --gd-text: #c9d1d9;
+        --gd-muted: #8b949e;
+        --gd-accent: #8b5cf6;
+        --gd-accent-hover: #7c3aed;
+        --gd-danger: #f85149;
+        --gd-focus: #58a6ff;
+      }
+
+      html[data-theme="light"] {
+        color-scheme: light;
+        --gd-bg: #f6f8fa;
+        --gd-surface: rgba(255, 255, 255, 0.7);
+        --gd-surface-opaque: #ffffff;
+        --gd-surface-alt: rgba(246, 248, 250, 0.6);
+        --gd-border: rgba(208, 215, 222, 0.8);
+        --gd-text: #24292f;
+        --gd-muted: #57606a;
+        --gd-accent: #7c3aed;
+        --gd-accent-hover: #6d28d9;
+        --gd-danger: #cf222e;
+        --gd-focus: #0969da;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial,
+          sans-serif;
+        background: var(--gd-bg);
+        color: var(--gd-text);
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        transition: background 0.4s ease;
+      }
+
+      .container {
+        display: flex;
+        width: 100%;
+        max-width: 1200px;
+        min-height: 100vh;
+        border-left: 1px solid var(--gd-border);
+        border-right: 1px solid var(--gd-border);
+        background: var(--gd-surface-opaque);
+      }
+
+      /* Sidebar */
+      .sidebar {
+        width: 260px;
+        background: var(--gd-surface);
+        backdrop-filter: blur(var(--gd-glass-blur));
+        -webkit-backdrop-filter: blur(var(--gd-glass-blur));
+        border-right: 1px solid var(--gd-border);
+        padding: 32px 0;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .sidebar-header {
+        padding: 0 24px 24px;
+        border-bottom: 1px solid var(--gd-border);
+        margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .app-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        flex-shrink: 0;
+        object-fit: contain;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      .sidebar-header h2 {
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--gd-text);
+      }
+
+      .sidebar-header .version {
+        font-size: 12px;
+        color: var(--gd-muted);
+        font-weight: 500;
+      }
+
+      .nav-btn {
+        position: relative;
+        display: block;
+        width: calc(100% - 24px);
+        margin: 4px 12px;
+        padding: 10px 16px;
+        border: none;
+        background: none;
+        text-align: left;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--gd-muted);
+        cursor: pointer;
+        border-radius: 8px;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .nav-btn:hover {
+        background: var(--gd-surface-alt);
+        color: var(--gd-text);
+        transform: translateX(4px);
+      }
+
+      .nav-btn.active {
+        background: color-mix(in srgb, var(--gd-accent) 12%, transparent);
+        color: var(--gd-accent);
+        font-weight: 600;
+      }
+
+      .nav-btn.active::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 20%;
+        height: 60%;
+        width: 3px;
+        background: var(--gd-accent);
+        border-radius: 0 4px 4px 0;
+      }
+
+      /* Main Content */
+      .main {
+        flex: 1;
+        padding: 48px 64px;
+        overflow-y: auto;
+        max-height: 100vh;
+      }
+
+      .main h1 {
+        font-size: 28px;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        margin-bottom: 32px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid var(--gd-border);
+        color: var(--gd-text);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      /* Tabs */
+      .tab {
+        display: none;
+        animation: tab-fade-in 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      @keyframes tab-fade-in {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .tab.active {
+        display: block;
+      }
+
+      /* Cards */
+      .card {
+        background: var(--gd-surface);
+        backdrop-filter: blur(var(--gd-glass-blur));
+        -webkit-backdrop-filter: blur(var(--gd-glass-blur));
+        border: 1px solid var(--gd-border);
+        border-radius: 16px;
+        margin-bottom: 32px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        overflow: hidden;
+      }
+
+      .card:hover {
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+      }
+
+      .card-header {
+        padding: 16px 20px;
+        background: var(--gd-surface-alt);
+        border-bottom: 1px solid var(--gd-border);
+        font-weight: 700;
+        font-size: 14px;
+        color: var(--gd-text);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .card-header::before {
+        content: attr(data-icon);
+        font-size: 14px;
+        width: 16px;
+        text-align: center;
+      }
+
+      .card-body {
+        padding: 16px;
+      }
+
+      .description {
+        font-size: 13px;
+        color: var(--gd-muted);
+        margin-bottom: 16px;
+        line-height: 1.5;
+      }
+
+      a {
+        color: var(--gd-accent);
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      /* Forms */
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: var(--gd-text);
+      }
+
+      input[type="text"],
+      input[type="password"],
+      input[type="number"],
+      select {
+        width: 100%;
+        padding: 10px 14px;
+        border: 1px solid var(--gd-border);
+        border-radius: 8px;
+        font-size: 14px;
+        background: var(--gd-bg);
+        color: var(--gd-text);
+        transition: all 0.2s ease;
+      }
+
+      input[type="color"] {
+        width: 60px;
+        height: 38px;
+        padding: 4px;
+        border: 1px solid var(--gd-border);
+        border-radius: 8px;
+        background: var(--gd-bg);
+        cursor: pointer;
+      }
+
+      /* Custom Notifications */
+      .toast-container {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .gd-toast {
+        padding: 12px 20px;
+        background: var(--gd-surface);
+        backdrop-filter: blur(var(--gd-glass-blur));
+        -webkit-backdrop-filter: blur(var(--gd-glass-blur));
+        border: 1px solid var(--gd-border);
+        border-radius: 10px;
+        color: var(--gd-text);
+        font-size: 14px;
+        font-weight: 500;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        animation: toast-slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      @keyframes toast-slide-in {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
+      .gd-toast.error {
+        border-color: var(--gd-danger);
+      }
+      .gd-toast.success {
+        border-color: var(--gd-accent);
+      }
+
+      /* Empty State */
+      .empty-history-visual {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 48px 24px;
+        color: var(--gd-muted);
+        gap: 12px;
+      }
+
+      .empty-history-visual svg {
+        width: 48px;
+        height: 48px;
+        opacity: 0.3;
+      }
+
+      /* Pulse for Rate Limit */
+      @keyframes pulse-red {
+        0% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.6;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+
+      .pulse-warning {
+        animation: pulse-red 1s infinite;
+      }
+
+      .history-collapsible.active {
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid var(--gd-border);
+        border-top: none;
+        border-radius: 0 0 8px 8px;
+      }
+
+      /* Header Action Buttons */
+      .header-action-btn {
+        background: none;
+        border: none;
+        color: var(--gd-muted);
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 4px;
+        margin-left: auto;
+        transition: all 0.2s;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .header-action-btn:hover {
+        background: var(--gd-surface-alt);
+        color: var(--gd-accent);
+      }
+
+      .header-action-btn svg {
+        width: 16px;
+        height: 16px;
+        transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      input:focus,
+      select:focus {
+        outline: none;
+        border-color: var(--gd-accent);
+        box-shadow: 0 0 0 4px
+          color-mix(in srgb, var(--gd-accent) 15%, transparent);
+      }
+
+      .btn {
+        padding: 10px 20px;
+        font-size: 14px;
+        font-weight: 600;
+        border-radius: 8px;
+        cursor: pointer;
+        border: 1px solid var(--gd-border);
+        background: var(--gd-surface-alt);
+        color: var(--gd-text);
+        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      .btn:hover {
+        background: var(--gd-border);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+
+      .btn:active {
+        transform: translateY(0);
+        opacity: 0.9;
+      }
+
+      .btn-primary {
+        background: var(--gd-accent);
+        color: white;
+        border-color: var(--gd-accent);
+      }
+
+      .btn-primary:hover {
+        background: var(--gd-accent-hover);
+      }
+
+      .btn-danger {
+        color: var(--gd-danger);
+        border-color: var(--gd-danger);
+        background: transparent;
+      }
+
+      .btn-danger:hover {
+        background: color-mix(in srgb, var(--gd-danger) 12%, transparent);
+      }
+
+      .input-row {
+        display: flex;
+        gap: 8px;
+      }
+
+      .input-row input {
+        flex: 1;
+      }
+
+      /* Radio */
+      .radio-group {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .radio-item {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        cursor: pointer;
+      }
+
+      .radio-item input {
+        margin-top: 4px;
+        accent-color: var(--gd-accent);
+      }
+
+      .radio-label strong {
+        display: block;
+        font-size: 14px;
+        margin-bottom: 2px;
+      }
+
+      .radio-label span {
+        font-size: 12px;
+        color: var(--gd-muted);
+      }
+
+      /* Grid */
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 100px 1fr;
+        gap: 20px;
+        align-items: center;
+      }
+
+      /* Status */
+      .status-text {
+        margin-top: 12px;
+        font-size: 13px;
+        font-weight: 500;
+      }
+
+      .status-text.success {
+        color: #238636;
+      }
+      .status-text.error {
+        color: var(--gd-danger);
+      }
+
+      /* Progress */
+      .progress-container {
+        margin: 12px 0;
+      }
+
+      .progress-bg {
+        height: 8px;
+        background: var(--gd-border);
+        border-radius: 4px;
+        overflow: hidden;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: var(--gd-accent);
+        width: 0%;
+        transition: width 0.3s ease;
+      }
+
+      .stat-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+        margin-bottom: 8px;
+      }
+
+      /* History Table */
+      .table-container {
+        margin-top: 8px;
+        max-height: 300px;
+        overflow-y: auto;
+        border-radius: 8px;
+        border: 1px solid var(--gd-border);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+
+      th,
+      td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid var(--gd-border);
+      }
+
+      th {
+        background: var(--gd-surface-alt);
+        font-weight: 600;
+        position: sticky;
+        top: 0;
+      }
+
+      .badge {
+        padding: 2px 8px;
+        background: var(--gd-surface-alt);
+        border: 1px solid var(--gd-border);
+        border-radius: 12px;
+        font-size: 11px;
+      }
+
+      /* Expandable History */
+      .history-expand-btn {
+        width: 100%;
+        padding: 12px;
+        margin-top: 16px;
+        background: var(--gd-surface-alt);
+        border: 1px solid var(--gd-border);
+        border-radius: 8px;
+        color: var(--gd-text);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: all 0.2s ease;
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .history-expand-btn:hover {
+        background: var(--gd-border);
+      }
+
+      .history-expand-btn::after {
+        content: "▼";
+        font-size: 10px;
+        transition: transform 0.3s ease;
+      }
+
+      .history-expand-btn.active::after {
+        transform: rotate(180deg);
+      }
+
+      .history-collapsible {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .history-collapsible.active {
+        max-height: 400px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <img
+            class="app-icon"
+            src="../img/icon.png"
+            alt=""
+            aria-hidden="true"
+          />
+          <div>
+            <h2>GitHub Smart Downloader</h2>
+            <span class="version">v2.2.0</span>
+          </div>
+        </div>
+        <div
+          role="tablist"
+          aria-label="Settings Categories"
+          style="display: flex; flex-direction: column"
+        >
+          <button
+            role="tab"
+            aria-selected="true"
+            aria-controls="general"
+            id="tab-general"
+            class="nav-btn active"
+            data-tab="general"
+          >
+            General
+          </button>
+          <button
+            role="tab"
+            aria-selected="false"
+            aria-controls="appearance"
+            id="tab-appearance"
+            class="nav-btn"
+            data-tab="appearance"
+          >
+            Appearance
+          </button>
+          <button
+            role="tab"
+            aria-selected="false"
+            aria-controls="advanced"
+            id="tab-advanced"
+            class="nav-btn"
+            data-tab="advanced"
+          >
+            Advanced
+          </button>
+        </div>
+      </aside>
+
+      <main class="main">
+        <!-- GENERAL -->
+        <div
+          id="general"
+          role="tabpanel"
+          aria-labelledby="tab-general"
+          class="tab active"
+        >
+          <h1>General Settings</h1>
+
+          <div class="card">
+            <div class="card-header" data-icon="🔐">GitHub Token</div>
+            <div class="card-body">
+              <p class="description">
+                Add a personal access token to increase API rate limits and
+                access private repos. Without token: 60 requests/hour. With
+                token: 5,000 requests/hour.
+              </p>
+              <div class="input-row">
+                <input
+                  type="password"
+                  id="tokenInput"
+                  placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                />
+                <button class="btn btn-primary" id="saveTokenBtn">Save</button>
+                <button class="btn" id="validateTokenBtn">Validate</button>
+                <button class="btn btn-danger" id="removeTokenBtn">
+                  Remove
+                </button>
+              </div>
+              <p class="description" style="margin-top: 12px">
+                <a
+                  href="https://github.com/settings/tokens/new?scopes=repo&description=GitHub%20Smart%20Downloader%20Chrome%20Extension%20-%20Repository%20Downloader"
+                  target="_blank"
+                  rel="noreferrer"
+                  >Generate a GitHub token with repo scope</a
+                >
+              </p>
+              <div class="status-text" id="tokenStatus"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header" data-icon="📝">File Naming</div>
+            <div class="card-body">
+              <div class="radio-group">
+                <label class="radio-item">
+                  <input type="radio" name="naming" value="fullPath" checked />
+                  <div class="radio-label">
+                    <strong>Full Path (Default)</strong>
+                    <span>owner_repo_path_branch.zip</span>
+                  </div>
+                </label>
+                <label class="radio-item">
+                  <input type="radio" name="naming" value="simpleName" />
+                  <div class="radio-label">
+                    <strong>Simple Name</strong>
+                    <span>foldername.zip</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- APPEARANCE -->
+        <div
+          id="appearance"
+          role="tabpanel"
+          aria-labelledby="tab-appearance"
+          class="tab"
+        >
+          <h1>Appearance</h1>
+
+          <div class="card">
+            <div class="card-header" data-icon="🎨">UI Customization</div>
+            <div class="card-body">
+              <div class="grid-2">
+                <label>Theme</label>
+                <select id="themeSelect">
+                  <option value="system">System Default</option>
+                  <option value="light">Light Mode</option>
+                  <option value="dark">Dark Mode</option>
+                </select>
+
+                <label>Accent Color</label>
+                <input type="color" id="buttonColor" value="#8b5cf6" />
+
+                <label>Button Text</label>
+                <input
+                  type="text"
+                  id="buttonText"
+                  value="Download Repository"
+                />
+
+                <label>Button Shape</label>
+                <select id="buttonStyle">
+                  <option value="none">Standard</option>
+                  <option value="default">Default</option>
+                  <option value="outline">Outline</option>
+                  <option value="rounded">Rounded</option>
+                  <option value="pill">Pill Shape</option>
+                </select>
+
+                <label>Button Position</label>
+                <select id="buttonPosition">
+                  <option value="separate">Separate (Explorer Header)</option>
+                  <option value="integrated">
+                    Integrated (Navigation Bar)
+                  </option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ADVANCED -->
+        <div
+          id="advanced"
+          role="tabpanel"
+          aria-labelledby="tab-advanced"
+          class="tab"
+        >
+          <h1>Advanced Settings</h1>
+          <div class="card">
+            <div class="card-header" data-icon="⚡">Engine Configuration</div>
+            <div class="card-body">
+              <div class="setting-item">
+                <div class="setting-info">
+                  <div class="setting-label">ZIP Compression Level</div>
+                  <div class="setting-desc">
+                    Level 0 (Store) is fastest. Levels 1-9 (Deflate) reduce file
+                    size but increase processing time.
+                  </div>
+                </div>
+                <div class="setting-control">
+                  <div
+                    style="
+                      display: flex;
+                      align-items: center;
+                      gap: 12px;
+                      width: 100%;
+                    "
+                  >
+                    <input
+                      type="range"
+                      id="zipCompressionLevel"
+                      min="0"
+                      max="9"
+                      step="1"
+                      value="0"
+                      style="flex: 1; accent-color: var(--gd-accent)"
+                    />
+                    <span
+                      id="compressionValue"
+                      style="
+                        font-weight: 600;
+                        width: 60px;
+                        text-align: right;
+                        font-variant-numeric: tabular-nums;
+                      "
+                      >Store (0)</span
+                    >
+                  </div>
+                </div>
+              </div>
+              <p
+                class="description"
+                style="
+                  margin-top: 8px;
+                  color: var(--gd-danger);
+                  font-size: 11px;
+                  font-weight: 500;
+                "
+              >
+                ⚠️ Warning: Higher compression levels significantly increase ZIP
+                generation time, especially for large repositories.
+              </p>
+
+              <div
+                class="setting-item"
+                style="
+                  border-top: 1px solid var(--gd-border);
+                  padding-top: 20px;
+                  margin-top: 20px;
+                "
+              >
+                <div class="setting-info">
+                  <div class="setting-label">Memory Usage Limit</div>
+                  <div class="setting-desc">
+                    Max memory allocated for directory caching and binary
+                    processing. Higher is better for large repos.
+                  </div>
+                </div>
+                <div class="setting-control">
+                  <div
+                    style="
+                      display: flex;
+                      align-items: center;
+                      gap: 12px;
+                      width: 100%;
+                    "
+                  >
+                    <input
+                      type="range"
+                      id="maxCacheSize"
+                      min="50"
+                      max="1000"
+                      step="50"
+                      value="100"
+                      style="flex: 1; accent-color: var(--gd-accent)"
+                    />
+                    <span
+                      id="cacheValue"
+                      style="
+                        font-weight: 600;
+                        width: 70px;
+                        text-align: right;
+                        font-variant-numeric: tabular-nums;
+                      "
+                      >100 MB</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header" data-icon="📊">
+              <span>Statistics & History</span>
+              <button
+                id="refreshHistoryBtn"
+                class="header-action-btn"
+                title="Refresh History & Statistics"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path
+                    d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"
+                  ></path>
+                  <polyline points="21 3 21 8 16 8"></polyline>
+                </svg>
+              </button>
+            </div>
+            <div class="card-body">
+              <div class="stat-row">
+                <span>Total Downloads</span>
+                <span id="statDownloads">0</span>
+              </div>
+              <div class="stat-row">
+                <span>Files Downloaded</span>
+                <span id="statFiles">0</span>
+              </div>
+              <div class="stat-row">
+                <span>Total Size</span>
+                <span id="statSize">0 B</span>
+              </div>
+
+              <button class="history-expand-btn" id="historyToggleBtn">
+                View Download History
+              </button>
+              <div class="history-collapsible" id="historyCollapsible">
+                <div class="table-container">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Files</th>
+                        <th>Size</th>
+                        <th>Date</th>
+                      </tr>
+                    </thead>
+                    <tbody id="historyTable">
+                      <tr class="empty-row">
+                        <td colspan="5">
+                          <div class="empty-history-visual">
+                            <svg
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-width="2"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                            >
+                              <polyline points="21 8 21 21 3 21 3 8"></polyline>
+                              <rect x="1" y="3" width="22" height="5"></rect>
+                              <line x1="10" y1="12" x2="14" y2="12"></line>
+                            </svg>
+                            <span>No download history available yet</span>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <button
+                class="btn btn-danger"
+                id="resetAllDataBtn"
+                style="margin-top: 16px; width: 100%"
+              >
+                Clear All History & Stats
+              </button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header" data-icon="⏱️">GitHub API Rate Limit</div>
+            <div class="card-body">
+              <div class="stat-row">
+                <span>Remaining</span>
+                <span id="rateCount">- / -</span>
+              </div>
+              <div class="progress-container">
+                <div class="progress-bg">
+                  <div class="progress-fill" id="rateBar"></div>
+                </div>
+              </div>
+              <div class="stat-row">
+                <span>Resets at</span>
+                <span id="rateReset">-</span>
+              </div>
+              <button
+                class="btn"
+                id="refreshRateBtn"
+                style="margin-top: 12px; width: 100%"
+              >
+                Refresh Status
+              </button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header" data-icon="💾">Data Management</div>
+            <div class="card-body">
+              <p class="description">
+                Export or import your extension configuration. Useful for
+                backups or multiple devices.
+              </p>
+              <div
+                style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px"
+              >
+                <button class="btn" id="exportBtn">Export Settings</button>
+                <button class="btn" id="importBtn">Import Settings</button>
+                <input type="file" id="importFile" accept=".json" hidden />
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="../js/shared.js"></script>
+    <script src="../js/settings.js"></script>
+  </body>
+</html>

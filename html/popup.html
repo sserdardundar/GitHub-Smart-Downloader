@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GitHub Smart Downloader</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --gd-bg: #0d1117;
+        --gd-surface: #161b22;
+        --gd-surface-alt: #21262d;
+        --gd-border: #30363d;
+        --gd-text: #c9d1d9;
+        --gd-muted: #8b949e;
+        --gd-accent: #8b5cf6;
+        --gd-accent-hover: #7c3aed;
+        --gd-danger: #f85149;
+        --gd-focus: #58a6ff;
+        --gd-success: #a78bfa;
+      }
+
+      @media (prefers-color-scheme: light) {
+        :root {
+          color-scheme: light;
+          --gd-bg: #f6f8fa;
+          --gd-surface: #ffffff;
+          --gd-surface-alt: #f6f8fa;
+          --gd-border: #d0d7de;
+          --gd-text: #24292f;
+          --gd-muted: #57606a;
+          --gd-accent: #7c3aed;
+          --gd-accent-hover: #6d28d9;
+          --gd-danger: #cf222e;
+          --gd-focus: #0969da;
+          --gd-success: #7c3aed;
+        }
+      }
+
+      html[data-theme="dark"] {
+        color-scheme: dark;
+        --gd-bg: #0d1117;
+        --gd-surface: #161b22;
+        --gd-surface-alt: #21262d;
+        --gd-border: #30363d;
+        --gd-text: #c9d1d9;
+        --gd-muted: #8b949e;
+        --gd-accent: #8b5cf6;
+        --gd-accent-hover: #7c3aed;
+        --gd-danger: #f85149;
+        --gd-focus: #58a6ff;
+        --gd-success: #a78bfa;
+      }
+
+      html[data-theme="light"] {
+        color-scheme: light;
+        --gd-bg: #f6f8fa;
+        --gd-surface: #ffffff;
+        --gd-surface-alt: #f6f8fa;
+        --gd-border: #d0d7de;
+        --gd-text: #24292f;
+        --gd-muted: #57606a;
+        --gd-accent: #7c3aed;
+        --gd-accent-hover: #6d28d9;
+        --gd-danger: #cf222e;
+        --gd-focus: #0969da;
+        --gd-success: #7c3aed;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        width: 340px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial,
+          sans-serif;
+        background: var(--gd-bg);
+        color: var(--gd-text);
+        overflow-x: hidden;
+      }
+
+      .header {
+        padding: 16px;
+        border-bottom: 1px solid var(--gd-border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: var(--gd-surface);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+
+      .repo-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        overflow: hidden;
+      }
+
+      .repo-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 6px;
+        flex-shrink: 0;
+        object-fit: contain;
+      }
+
+      .repo-text {
+        overflow: hidden;
+      }
+
+      .repo-owner {
+        font-size: 11px;
+        color: var(--gd-muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .repo-name {
+        font-size: 14px;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: var(--gd-text);
+      }
+
+      .settings-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--gd-muted);
+        padding: 4px;
+        border-radius: 6px;
+        display: flex;
+      }
+
+      .settings-btn:hover {
+        background: var(--gd-border);
+        color: var(--gd-text);
+      }
+
+      .main {
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .download-btn {
+        width: 100%;
+        padding: 12px 16px;
+        font-size: 14px;
+        font-weight: 600;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        background: var(--gd-accent);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      .download-btn:hover:not(:disabled) {
+        background: var(--gd-accent-hover);
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+      }
+
+      .download-btn:active:not(:disabled) {
+        transform: translateY(0);
+      }
+
+      .download-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .context {
+        text-align: center;
+        font-size: 12px;
+        color: var(--gd-muted);
+        margin-top: -4px;
+      }
+
+      .rate-card {
+        padding: 12px;
+        border: 1px solid var(--gd-border);
+        border-radius: 10px;
+        background: var(--gd-surface);
+      }
+
+      .rate-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+      }
+
+      .rate-title {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--gd-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .rate-refresh {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--gd-muted);
+        padding: 2px;
+        border-radius: 4px;
+        display: flex;
+      }
+
+      .rate-refresh:hover:not(:disabled) {
+        color: var(--gd-text);
+        background: var(--gd-border);
+      }
+
+      .rate-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        font-size: 13px;
+      }
+
+      .rate-value {
+        font-weight: 700;
+        color: var(--gd-text);
+      }
+
+      .rate-reset {
+        font-size: 11px;
+        color: var(--gd-muted);
+      }
+
+      .rate-bar {
+        height: 4px;
+        background: var(--gd-border);
+        border-radius: 2px;
+        margin-top: 8px;
+        overflow: hidden;
+      }
+
+      .rate-fill {
+        height: 100%;
+        background: var(--gd-accent);
+        transition: width 0.3s ease;
+      }
+
+      /* Active Jobs Section */
+      .active-jobs-section {
+        border-top: 1px solid var(--gd-border);
+        padding-top: 16px;
+        margin-top: 4px;
+      }
+
+      .section-title {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--gd-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 12px;
+      }
+
+      .jobs-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-height: 240px;
+        overflow-y: auto;
+        padding-right: 4px;
+      }
+
+      .jobs-list::-webkit-scrollbar {
+        width: 4px;
+      }
+
+      .jobs-list::-webkit-scrollbar-thumb {
+        background: var(--gd-border);
+        border-radius: 2px;
+      }
+
+      .job-card {
+        background: var(--gd-surface);
+        border: 1px solid var(--gd-border);
+        border-radius: 8px;
+        padding: 10px;
+        transition: border-color 0.2s;
+      }
+
+      .job-card:hover {
+        border-color: var(--gd-surface-alt);
+      }
+
+      .job-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .job-main {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .job-title {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--gd-text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: block;
+      }
+
+      .job-msg {
+        font-size: 11px;
+        color: var(--gd-muted);
+        margin-top: 2px;
+      }
+
+      .job-cancel-btn {
+        background: none;
+        border: 1px solid var(--gd-border);
+        color: var(--gd-muted);
+        font-size: 10px;
+        font-weight: 600;
+        padding: 2px 6px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .job-cancel-btn:hover {
+        background: var(--gd-danger);
+        border-color: var(--gd-danger);
+        color: white;
+      }
+
+      .job-progress-container {
+        height: 4px;
+        background: var(--gd-border);
+        border-radius: 2px;
+        overflow: hidden;
+        margin-bottom: 6px;
+      }
+
+      .job-progress-fill {
+        height: 100%;
+        background: var(--gd-accent);
+        transition: width 0.3s ease;
+      }
+
+      .job-meta {
+        display: flex;
+        justify-content: space-between;
+        font-size: 10px;
+        color: var(--gd-muted);
+        font-family: ui-monospace, SFMono-Regular, monospace;
+      }
+
+      .no-jobs {
+        text-align: center;
+        padding: 20px;
+        font-size: 12px;
+        color: var(--gd-muted);
+        border: 1px dashed var(--gd-border);
+        border-radius: 8px;
+      }
+
+      .footer {
+        padding: 12px 16px;
+        border-top: 1px solid var(--gd-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: var(--gd-surface);
+        font-size: 11px;
+      }
+
+      .footer a {
+        color: var(--gd-muted);
+        text-decoration: none;
+      }
+
+      .footer a:hover {
+        color: var(--gd-accent);
+      }
+
+      .copy-btn {
+        width: 100%;
+        padding: 8px;
+        font-size: 12px;
+        background: var(--gd-surface-alt);
+        border: 1px solid var(--gd-border);
+        border-radius: 6px;
+        color: var(--gd-text);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        transition: all 0.2s;
+      }
+
+      .copy-btn:hover {
+        background: var(--gd-border);
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="header">
+      <div class="repo-info">
+        <img
+          class="repo-icon"
+          src="../img/icon.png"
+          alt=""
+          aria-hidden="true"
+        />
+        <div class="repo-text">
+          <div class="repo-owner" id="repoOwner">-</div>
+          <div class="repo-name" id="repoName">-</div>
+        </div>
+      </div>
+      <button class="settings-btn" id="settingsBtn" title="Settings">
+        <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor">
+          <path
+            d="M8 0a8.2 8.2 0 0 1 .701.031C9.444.095 9.99.645 10.16 1.29l.271 1.035a.167.167 0 0 0 .162.115c.423.01.815.087 1.176.223a.166.166 0 0 0 .178-.052l.716-.807c.52-.586 1.427-.557 1.956.095q.653.805 1.096 1.77c.28.608.113 1.341-.409 1.76l-.766.613a.167.167 0 0 0-.056.173 5.4 5.4 0 0 1 0 1.576.167.167 0 0 0 .056.174l.766.613c.522.418.689 1.15.409 1.759-.443.966-1.096 1.77-1.77 1.77-.655 0-1.226-.352-1.577-.864l-.716-.807a.166.166 0 0 0-.178-.052 5.3 5.3 0 0 1-1.176.223.166.166 0 0 0-.162.115l-.271 1.035c-.169.645-.716 1.195-1.459 1.26a8.2 8.2 0 0 1-1.402 0c-.743-.065-1.29-.615-1.459-1.26l-.271-1.035a.166.166 0 0 0-.162-.115 5.3 5.3 0 0 1-1.176-.223.167.167 0 0 0-.178.052l-.716.807c-.35.512-.922.864-1.577.864-.674 0-1.327-.804-1.77-1.77-.28-.609-.113-1.341.409-1.759l.766-.613a.167.167 0 0 0 .056-.174 5.4 5.4 0 0 1 0-1.576.166.166 0 0 0-.056-.173l-.766-.613c-.522-.419-.689-1.152-.409-1.76.443-.965 1.096-1.77 1.77-1.77.529-.652 1.436-.681 1.956-.095l.716.807a.166.166 0 0 0 .178.052c.361-.136.753-.213 1.176-.223a.167.167 0 0 0 .162-.115l.271-1.035C6.709.645 7.255.095 8-.03a8.2 8.2 0 0 1 .7 0ZM8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"
+          ></path>
+        </svg>
+      </button>
+    </div>
+
+    <div class="main">
+      <button class="download-btn" id="downloadBtn">
+        <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor">
+          <path
+            d="M2.75 14A1.75 1.75 0 0 1 1 12.25v-2.5a.75.75 0 0 1 1.5 0v2.5c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25v-2.5a.75.75 0 0 1 1.5 0v2.5A1.75 1.75 0 0 1 13.25 14Z"
+          ></path>
+          <path
+            d="M7.25 7.689V2a.75.75 0 0 1 1.5 0v5.689l1.97-1.969a.749.749 0 1 1 1.06 1.06l-3.25 3.25a.749.749 0 0 1-1.06 0L4.22 6.78a.749.749 0 1 1 1.06-1.06l1.97 1.969Z"
+          ></path>
+        </svg>
+        Download Repository
+      </button>
+
+      <div class="context" id="context">Full Repository</div>
+
+      <button class="copy-btn" id="copyUrlBtn">
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
+          <path
+            d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"
+          ></path>
+          <path
+            d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"
+          ></path>
+        </svg>
+        <span id="copyBtnText">Copy Repo URL</span>
+      </button>
+
+      <div class="rate-card" id="rateCard">
+        <div class="rate-header">
+          <span class="rate-title">API limit</span>
+          <button
+            class="rate-refresh"
+            id="popupRefreshRateBtn"
+            title="Refresh API limit"
+          >
+            <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor">
+              <path
+                d="M1.705 8a6.326 6.326 0 0 1 10.845-4.44.75.75 0 0 1-1.07 1.05A4.826 4.826 0 0 0 3.205 8a4.826 4.826 0 0 0 8.275 3.39.75.75 0 0 1 1.07 1.05A6.326 6.326 0 0 1 1.705 8Z"
+              ></path>
+              <path
+                d="M11.25 1a.75.75 0 0 1 .75.75V4h2.25a.75.75 0 0 1 0 1.5h-3A.75.75 0 0 1 10.5 4.75v-3A.75.75 0 0 1 11.25 1Z"
+              ></path>
+            </svg>
+          </button>
+        </div>
+        <div class="rate-row">
+          <span class="rate-value" id="popupRateCount">-/-</span>
+          <span class="rate-reset" id="popupRateReset">-</span>
+        </div>
+        <div class="rate-bar">
+          <div class="rate-fill" id="popupRateBar"></div>
+        </div>
+      </div>
+
+      <div class="active-jobs-section" id="jobsSection">
+        <div class="section-title">Active Downloads</div>
+        <div class="jobs-list" id="jobsList">
+          <div class="no-jobs">No active downloads</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <a
+        href="https://github.com/sserdardundar/GitHub-Smart-Downloader/issues"
+        target="_blank"
+        >Report Issue</a
+      >
+      <span class="version">v2.2.0</span>
+    </div>
+
+    <script src="../js/shared.js"></script>
+    <script src="../js/popup.js"></script>
+  </body>
+</html>

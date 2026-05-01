@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "GitHub Smart Downloader",
+  "version": "2.2.0",
+  "description": "Download GitHub repositories, folders, or selected files as ZIP archives directly from your browser.",
+  "permissions": ["storage", "downloads", "offscreen"],
+  "host_permissions": [
+    "https://github.com/*",
+    "https://api.github.com/*",
+    "https://raw.githubusercontent.com/*",
+    "https://codeload.github.com/*"
+  ],
+  "action": {
+    "default_popup": "html/popup.html",
+    "default_icon": {
+      "16": "img/icon.png",
+      "48": "img/icon.png",
+      "128": "img/icon.png"
+    }
+  },
+  "icons": {
+    "16": "img/icon.png",
+    "48": "img/icon.png",
+    "128": "img/icon.png"
+  },
+  "background": {
+    "service_worker": "js/background.js"
+  },
+  "options_page": "html/settings.html",
+  "content_scripts": [
+    {
+      "matches": ["https://github.com/*"],
+      "js": ["js/shared.js", "js/contentScript.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["lib/jszip.min.js", "js/shared.js"],
+      "matches": ["https://github.com/*"]
+    }
+  ]
+}
