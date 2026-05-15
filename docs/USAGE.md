@@ -2,9 +2,19 @@
 
 GitHub Smart Downloader is designed to be seamless and integrate directly into your GitHub workflow. This guide covers how to use its various features effectively.
 
-## Installation (Development Mode)
+## Installation
 
-Since GitHub Smart Downloader is currently a developer tool, you can install it manually:
+### Chrome Web Store
+
+The recommended installation path is the published Chrome Web Store listing:
+
+[Install GitHub Smart Downloader from the Chrome Web Store](https://chromewebstore.google.com/detail/apnjimllodfnaplhmlihkgnanmmcdjfi?utm_source=item-share-cb)
+
+After installation, pin the extension if you want quick access to the popup dashboard and settings.
+
+### Development Mode
+
+If you are contributing to the extension or testing a local build, install it manually:
 
 1. Download or clone this repository.
 2. Open Chrome and navigate to `chrome://extensions/`.

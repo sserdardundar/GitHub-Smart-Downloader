@@ -4,6 +4,15 @@
   # GitHub Smart Downloader
 
   **GitHub Smart Downloader** is a Manifest V3 Chrome extension for downloading GitHub repositories, folders, or selected files as ZIP archives directly from the browser. It supports full repository downloads, folder-level downloads, selected file/folder packaging, GitHub token-based API access, and progress tracking.
+
+  <p>
+    <a href="https://chromewebstore.google.com/detail/apnjimllodfnaplhmlihkgnanmmcdjfi?utm_source=item-share-cb">
+      <img src="https://img.shields.io/badge/Chrome%20Web%20Store-Install%20Extension-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Install GitHub Smart Downloader from the Chrome Web Store">
+    </a>
+    <a href="docs/USAGE.md">
+      <img src="https://img.shields.io/badge/Read%20the%20Usage%20Guide-1f2937?style=for-the-badge" alt="Read the usage guide">
+    </a>
+  </p>
 </div>
 
 ---
@@ -102,10 +111,22 @@ flowchart TD
 
 ## 🛠️ Installation & Setup
 
-<details>
-<summary><b>Standard Installation (Unpacked)</b></summary>
+### Recommended: Chrome Web Store
 
-1.  **Clone this repository**: `git clone https://github.com/sserdardundar/GitHub Smart Downloader.git`
+Install the published extension directly from the Chrome Web Store:
+
+<p>
+  <a href="https://chromewebstore.google.com/detail/apnjimllodfnaplhmlihkgnanmmcdjfi?utm_source=item-share-cb">
+    <img src="https://img.shields.io/badge/Add%20to%20Chrome-GitHub%20Smart%20Downloader-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Add GitHub Smart Downloader to Chrome">
+  </a>
+</p>
+
+After installation, open any GitHub repository and use the injected download controls near the repository toolbar, folder rows, and file rows. For larger repositories or frequent downloads, add a GitHub Personal Access Token in the extension settings to raise the GitHub API rate limit from 60 requests per hour to 5,000 requests per hour.
+
+<details>
+<summary><b>Developer Installation (Unpacked)</b></summary>
+
+1.  **Clone this repository**: `git clone https://github.com/sserdardundar/GitHub-Smart-Downloader.git`
 2.  **Open Chrome Extensions**: Navigate to `chrome://extensions/`.
 3.  **Enable Developer Mode**: Toggle the switch in the top right.
 4.  **Load Unpacked**: Click "Load unpacked" and select the root directory of this project.
