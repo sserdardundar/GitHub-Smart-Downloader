@@ -78,7 +78,7 @@ The `planDownloadStrategy` function evaluates the most efficient approach for ev
 - **Trigger**: User requests the root of a branch/repo.
 - **Benefit**: Zero API cost; direct redirection to GitHub's native ZIP generator.
 
-### 4.2 Surgical Extraction (Filtered Archive)
+### 4.2 Filtered Archive Strategy
 
 - **Trigger**: High selection density (90%+) or cache-hit on a shared archive.
 - **Benefit**: Opens a full archive in `JSZip` and removes excluded folders. This is the fastest method for large repositories as it avoids recursive API scanning.
@@ -86,7 +86,7 @@ The `planDownloadStrategy` function evaluates the most efficient approach for ev
 ### 4.3 Recursive Scan Strategy
 
 - **Trigger**: Sparse or fragmented selections.
-- **Benefit**: Extreme precision; only fetches specifically requested files.
+- **Benefit**: Fetches only the requested files.
 
 ---
 

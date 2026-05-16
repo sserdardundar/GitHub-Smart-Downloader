@@ -329,7 +329,7 @@
       });
     }
 
-    // Strategy 3: Surgical Extraction (Filtered Archive)
+    // Strategy 3: filtered archive from the shared repo ZIP
     // Efficiency: High for dense selections, extremely high for cache hits
     if (isRepoRoot || input.hasCachedArchive || input.isArchivePending) {
       let archiveBaseScore = 220;
@@ -487,6 +487,6 @@
     fetchWithRetry,
   };
 
-  root.GitDownerShared = api;
+  root.GitHubSmartDownloaderShared = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

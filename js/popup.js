@@ -17,6 +17,11 @@
     const popupRateReset = document.getElementById("popupRateReset");
     const popupRateBar = document.getElementById("popupRateBar");
     const popupRefreshRateBtn = document.getElementById("popupRefreshRateBtn");
+    const onboardingCard = document.getElementById("onboardingCard");
+    const dismissOnboardingBtn = document.getElementById(
+      "dismissOnboardingBtn",
+    );
+    const popupOnboardingKey = "gsdPopupOnboardingDismissed";
 
     let currentTabUrl = "";
     let activeJobId = null;
@@ -39,6 +44,8 @@
     if (popupRefreshRateBtn) {
       popupRefreshRateBtn.addEventListener("click", () => refreshRateLimit());
     }
+
+    initPopupOnboarding();
 
     copyUrlBtn.addEventListener("click", async () => {
       if (!currentTabUrl) return;
@@ -100,6 +107,19 @@
 
     setInterval(updateJobsList, 1000);
     updateJobsList();
+
+    function initPopupOnboarding() {
+      if (!onboardingCard || !dismissOnboardingBtn) return;
+
+      chrome.storage.local.get({ [popupOnboardingKey]: false }, (result) => {
+        onboardingCard.hidden = Boolean(result[popupOnboardingKey]);
+      });
+
+      dismissOnboardingBtn.addEventListener("click", () => {
+        onboardingCard.hidden = true;
+        chrome.storage.local.set({ [popupOnboardingKey]: true });
+      });
+    }
 
     function updateJobsList() {
       chrome.runtime.sendMessage({ action: "getAllJobs" }, (response) => {
@@ -180,7 +200,7 @@
     }
 
     function parseUrl(url) {
-      return window.GitDownerShared?.parseGitHubUrl(url) || null;
+      return window.GitHubSmartDownloaderShared?.parseGitHubUrl(url) || null;
     }
 
     function applyPopupTheme(themeMode) {
@@ -202,7 +222,7 @@
     }
 
     function formatBytes(bytes) {
-      return window.GitDownerShared?.formatBytes(bytes) || "";
+      return window.GitHubSmartDownloaderShared?.formatBytes(bytes) || "";
     }
 
     function loadRateLimit() {
@@ -226,18 +246,19 @@
     function renderRateLimit(rateLimit) {
       if (!popupRateCount || !popupRateReset || !popupRateBar) return;
       const data = rateLimit || { limit: 60, remaining: 60, reset: 0 };
-      const percent = window.GitDownerShared?.getRateLimitPercent(data) || 0;
+      const percent =
+        window.GitHubSmartDownloaderShared?.getRateLimitPercent(data) || 0;
 
       popupRateCount.textContent = `${data.remaining}/${data.limit}`;
       if (data.tokenError) {
         popupRateReset.textContent = data.tokenError;
         popupRateReset.style.color = "var(--gd-danger)";
       } else if (data.hasToken && data.tokenValid) {
-        popupRateReset.textContent = `Token valid • resets ${window.GitDownerShared?.formatRateLimitReset(data.reset)}`;
+        popupRateReset.textContent = `Token valid • resets ${window.GitHubSmartDownloaderShared?.formatRateLimitReset(data.reset)}`;
         popupRateReset.style.color = "var(--gd-success)";
       } else {
         popupRateReset.textContent = data.reset
-          ? `resets ${window.GitDownerShared?.formatRateLimitReset(data.reset)}`
+          ? `resets ${window.GitHubSmartDownloaderShared?.formatRateLimitReset(data.reset)}`
           : "standard limit";
         popupRateReset.style.color = "";
       }

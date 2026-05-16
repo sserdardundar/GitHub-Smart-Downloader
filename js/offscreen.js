@@ -3,7 +3,8 @@ const {
   buildRawUrl,
   dedupeFilesByPath,
   fetchWithRetry,
-} = GitDownerShared;
+  getZipSizeEstimate,
+} = GitHubSmartDownloaderShared;
 
 const CONFIG = {
   BASE_API_URL: "https://api.github.com/repos",
@@ -14,7 +15,7 @@ const activeOffscreenJobs = new Map();
 
 // IndexedDB interface for persisting repository archives across background suspension cycles
 const ArchiveDB = {
-  DB_NAME: "GitDownerArchives",
+  DB_NAME: "GitHubSmartDownloaderArchives",
   STORE_NAME: "archives",
   VERSION: 1,
 
@@ -377,7 +378,7 @@ async function handleGenerateZip(
         const downloadPromise = (async () => {
           try {
             const archiveUrl =
-              window.GitDownerShared?.buildArchiveUrl(repoInfo);
+              window.GitHubSmartDownloaderShared?.buildArchiveUrl(repoInfo);
             if (!archiveUrl) throw new Error("Could not build archive URL");
             updateBackgroundCacheState(repoKey, "starting");
             chrome.runtime.sendMessage({
@@ -423,6 +424,8 @@ async function handleGenerateZip(
                     status: "downloading",
                     message: `Downloading shared archive (${currentMB}MB)...`,
                     progress: 15 + progress,
+                    bytesDownloaded: receivedLength,
+                    estimatedBytes: contentLength,
                   });
                 }
               }
@@ -489,7 +492,8 @@ async function handleGenerateZip(
           : null;
 
         let count = 0;
-        archiveZip.forEach((relativePath) => {
+        let estimatedBytes = 0;
+        archiveZip.forEach((relativePath, entry) => {
           const withoutRoot = relativePath
             .split("/")
             .slice(1)
@@ -501,16 +505,32 @@ async function handleGenerateZip(
               (p) => withoutRoot === p || withoutRoot.startsWith(p + "/"),
             );
             if (!isSelected) archiveZip.remove(relativePath);
-            else count++;
+            else if (!entry.dir) {
+              count++;
+              estimatedBytes += entry._data?.uncompressedSize || 0;
+            }
           } else {
             const topLevel = withoutRoot.split("/")[0];
             if (topLevel && excluded.has(topLevel))
               archiveZip.remove(relativePath);
-            else count++;
+            else if (!entry.dir) {
+              count++;
+              estimatedBytes += entry._data?.uncompressedSize || 0;
+            }
           }
         });
         zip.files = archiveZip.files;
         totalFilesCount = count;
+        chrome.runtime.sendMessage({
+          action: "offscreenProgress",
+          jobId,
+          status: "zipping",
+          message: `Preparing ${count} files...`,
+          progress: 72,
+          filesCompleted: 0,
+          filesTotal: count,
+          estimatedBytes,
+        });
       } finally {
         if (cacheEntry) {
           cacheEntry.refCount--;
@@ -530,6 +550,17 @@ async function handleGenerateZip(
     if (mode !== "filtered_archive_fast") {
       if (!filesToDownload || filesToDownload.length === 0)
         throw new Error("No files found.");
+      const estimatedBytes = getZipSizeEstimate(filesToDownload);
+      chrome.runtime.sendMessage({
+        action: "offscreenProgress",
+        jobId,
+        status: "downloading",
+        message: `Preparing ${filesToDownload.length} files...`,
+        progress: 20,
+        filesCompleted: 0,
+        filesTotal: filesToDownload.length,
+        estimatedBytes,
+      });
       const concurrency = CONFIG.DEFAULT_CONCURRENCY;
       let index = 0,
         completed = 0;
@@ -554,6 +585,7 @@ async function handleGenerateZip(
                 completed: completed,
                 total: filesToDownload.length,
                 currentFile: file.name,
+                estimatedBytes,
               });
             }
           } catch (error) {
@@ -660,6 +692,7 @@ async function expandItems(repoInfo, items, token, jobId, signal) {
         name: item.name,
         path: item.path,
         download_url: item.download_url || buildRawUrl(repoInfo, item.path),
+        size: item.size,
       });
     } else if (item.type === "dir") {
       const dirFiles = await enumerateFiles(
@@ -716,6 +749,7 @@ async function enumerateFiles(repoInfo, dirPath, token, jobId, signal) {
             name: item.path.split("/").pop(),
             path: item.path,
             download_url: buildRawUrl(repoInfo, item.path),
+            size: item.size,
           }));
       }
     } catch (error) {
@@ -757,6 +791,7 @@ async function sequentialScan(repoInfo, dirPath, token, jobId, signal) {
             name: item.name,
             path: item.path,
             download_url: item.download_url || buildRawUrl(repoInfo, item.path),
+            size: item.size,
           });
         else if (item.type === "dir") queue.push(item.path);
       }

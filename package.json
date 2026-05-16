@@ -1,6 +1,6 @@
 {
-  "name": "github-repository-downloader",
-  "version": "2.2.0",
+  "name": "github-smart-downloader",
+  "version": "2.3.0",
   "description": "Download GitHub repositories or specific directories as ZIP files",
   "scripts": {
     "test": "jest",

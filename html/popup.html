@@ -194,6 +194,99 @@
         margin-top: -4px;
       }
 
+      .onboarding-card {
+        position: relative;
+        padding: 12px;
+        border: 1px solid var(--gd-border);
+        border: 1px solid
+          color-mix(in srgb, var(--gd-accent) 45%, var(--gd-border));
+        border-radius: 8px;
+        background: var(--gd-surface);
+        box-shadow: 0 8px 22px rgba(0, 0, 0, 0.14);
+      }
+
+      .onboarding-card[hidden] {
+        display: none;
+      }
+
+      .onboarding-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+
+      .onboarding-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--gd-accent);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .onboarding-dismiss {
+        width: 24px;
+        height: 24px;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--gd-muted);
+        cursor: pointer;
+        font-size: 16px;
+        line-height: 1;
+      }
+
+      .onboarding-dismiss:hover,
+      .onboarding-dismiss:focus-visible {
+        border-color: var(--gd-border);
+        background: var(--gd-surface-alt);
+        color: var(--gd-text);
+      }
+
+      .onboarding-steps {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        list-style: none;
+      }
+
+      .onboarding-step {
+        display: grid;
+        grid-template-columns: 18px 1fr;
+        gap: 8px;
+        align-items: start;
+      }
+
+      .onboarding-step-num {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+        border-radius: 6px;
+        background: rgba(139, 92, 246, 0.14);
+        background: color-mix(in srgb, var(--gd-accent) 18%, transparent);
+        color: var(--gd-accent);
+        font-size: 10px;
+        font-weight: 700;
+      }
+
+      .onboarding-step strong {
+        display: block;
+        font-size: 12px;
+        color: var(--gd-text);
+        line-height: 1.25;
+      }
+
+      .onboarding-step-copy > span {
+        display: block;
+        margin-top: 2px;
+        font-size: 11px;
+        line-height: 1.35;
+        color: var(--gd-muted);
+      }
+
       .rate-card {
         padding: 12px;
         border: 1px solid var(--gd-border);
@@ -477,6 +570,50 @@
         <span id="copyBtnText">Copy Repo URL</span>
       </button>
 
+      <section
+        class="onboarding-card"
+        id="onboardingCard"
+        aria-label="Quick start"
+        hidden
+      >
+        <div class="onboarding-head">
+          <span class="onboarding-label">Quick start</span>
+          <button
+            class="onboarding-dismiss"
+            id="dismissOnboardingBtn"
+            type="button"
+            aria-label="Dismiss quick start"
+          >
+            &times;
+          </button>
+        </div>
+        <ol class="onboarding-steps">
+          <li class="onboarding-step">
+            <span class="onboarding-step-num">1</span>
+            <span class="onboarding-step-copy">
+              <strong>Use it on repo pages</strong>
+              <span>Download a repository or the current folder.</span>
+            </span>
+          </li>
+          <li class="onboarding-step">
+            <span class="onboarding-step-num">2</span>
+            <span class="onboarding-step-copy">
+              <strong>Select only what you need</strong>
+              <span
+                >Row checkboxes let you package chosen files and folders.</span
+              >
+            </span>
+          </li>
+          <li class="onboarding-step">
+            <span class="onboarding-step-num">3</span>
+            <span class="onboarding-step-copy">
+              <strong>Add a token when needed</strong>
+              <span>Use settings for private repos or higher API limits.</span>
+            </span>
+          </li>
+        </ol>
+      </section>
+
       <div class="rate-card" id="rateCard">
         <div class="rate-header">
           <span class="rate-title">API limit</span>
@@ -518,7 +655,7 @@
         target="_blank"
         >Report Issue</a
       >
-      <span class="version">v2.2.0</span>
+      <span class="version">v2.3.0</span>
     </div>
 
     <script src="../js/shared.js"></script>

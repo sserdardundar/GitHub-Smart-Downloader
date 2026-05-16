@@ -1,6 +1,6 @@
 # Usage Guide
 
-GitHub Smart Downloader is designed to be seamless and integrate directly into your GitHub workflow. This guide covers how to use its various features effectively.
+GitHub Smart Downloader adds repository, folder, and selected-item ZIP downloads directly to GitHub pages. This guide covers the main workflows.
 
 ## Installation
 

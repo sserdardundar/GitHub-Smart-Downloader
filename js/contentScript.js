@@ -9,6 +9,8 @@ const DEFAULT_SETTINGS = {
   themeMode: "system",
 };
 
+const PAGE_ONBOARDING_KEY = "gsdPageOnboardingDismissed";
+
 let buttonRenderNonce = 0;
 let downloadButton = null;
 let statusToast = null;
@@ -19,6 +21,8 @@ let lastToastProgress = 0;
 let actionBar = null;
 let lastCheckedPath = null;
 let selectionDelegationReady = false;
+let selectionEstimateNonce = 0;
+let selectionEstimateTimer = null;
 let activeToasts = new Map(); // jobId -> toastElement
 let deadJobIds = new Set(); // IDs we've already removed/finished
 let pushedOutJobIds = new Set(); // IDs currently in the 'Waiting Room' (hidden)
@@ -35,7 +39,7 @@ function isContextValid() {
 function safeSendMessage(message, callback) {
   if (!isContextValid()) {
     console.warn(
-      "[GRD] Extension context invalidated. Please refresh the page.",
+      "[GSD] Extension context invalidated. Please refresh the page.",
     );
     updateToast(
       "context-error",
@@ -49,7 +53,7 @@ function safeSendMessage(message, callback) {
     chrome.runtime.sendMessage(message, callback);
     return true;
   } catch (e) {
-    console.warn("[GRD] Failed to send message:", e.message);
+    console.warn("[GSD] Failed to send message:", e.message);
     if (e.message.includes("context invalidated")) {
       updateToast(
         "context-error",
@@ -63,7 +67,7 @@ function safeSendMessage(message, callback) {
 }
 
 function parseGitHubUrl(url) {
-  return window.GitDownerShared?.parseGitHubUrl(url) || null;
+  return window.GitHubSmartDownloaderShared?.parseGitHubUrl(url) || null;
 }
 
 function isRepoPage() {
@@ -299,26 +303,21 @@ function updateToast(jobId, message, progress, isError = false, details = {}) {
   const metaEl = toast.querySelector(".gd-toast-meta");
   const barEl = toast.querySelector(".gd-toast-progress-bar");
 
-  const rawFilename =
-    details.filename || (details.details && details.details.filename);
-  if (rawFilename && msgEl) {
-    msgEl.textContent = rawFilename;
-    const statusPart = toUserStatusMessage(message, isError);
-    const sizePart = getSizeMeta(details);
-    if (statusPart && sizePart && metaEl) {
-      metaEl.innerHTML = `<span>${statusPart}</span> • <span>${sizePart}</span>`;
-    } else if (metaEl) {
-      metaEl.textContent = statusPart || sizePart || "";
-    }
-  } else if (msgEl) {
-    msgEl.textContent = toUserStatusMessage(message, isError);
-    if (metaEl) metaEl.textContent = getSizeMeta(details);
-  }
-
   const isComplete =
     details.status === "complete" ||
     progress >= 100 ||
     message === "Download ready!";
+  const rawFilename =
+    details.filename || (details.details && details.details.filename);
+  if (rawFilename && msgEl) {
+    msgEl.textContent = isComplete
+      ? `Download ready: ${rawFilename}`
+      : rawFilename;
+    if (metaEl) metaEl.textContent = getToastMeta(message, details, isError);
+  } else if (msgEl) {
+    msgEl.textContent = toUserStatusMessage(message, isError);
+    if (metaEl) metaEl.textContent = getToastMeta(message, details, isError);
+  }
 
   if (isError) toast.classList.add("gd-toast-error");
   if (isComplete) {
@@ -339,7 +338,7 @@ function updateToast(jobId, message, progress, isError = false, details = {}) {
 
   if ((isComplete || isError) && !toast.dataset.grdExpiring) {
     toast.dataset.grdExpiring = "true";
-    const delay = isError ? 8000 : 3000;
+    const delay = isError ? 8000 : 6000;
     setTimeout(() => removeToast(jobId), delay);
   }
 }
@@ -361,36 +360,48 @@ function toUserStatusMessage(message, isError = false) {
   return text;
 }
 
-function getSizeMeta(details = {}) {
-  const downloaded = Number(details.bytesDownloaded) || 0;
-  const estimated = Number(details.estimatedBytes) || 0;
+function getToastMeta(message, details = {}, isError = false) {
+  if (isError) return "";
+  const parts = [];
+  const status = toUserStatusMessage(message, false);
+  const fileCount = getFileCountMeta(details);
+  const current = getCurrentFileMeta(details);
 
-  if (downloaded > 0 && estimated > 0) {
-    return `${formatBytes(downloaded)} / ${formatBytes(estimated)}`;
-  }
-
-  if (downloaded > 0) {
-    return `Downloaded: ${formatBytes(downloaded)}`;
-  }
-
-  if (estimated > 0) {
-    return `Estimated size: ${formatBytes(estimated)}`;
-  }
-
-  if (downloaded === 0 && details.status === "downloading") {
-    // For filtered/archive downloads, we don't have byte counts yet
+  if (details.status === "complete") {
     return "";
   }
 
-  if (details.status === "zipping") {
-    return "Wrapping up...";
+  if (status) parts.push(status);
+  if (fileCount) parts.push(fileCount);
+  if (current) parts.push(current);
+  return parts.join(" • ");
+}
+
+function getFileCountMeta(details = {}) {
+  const completed = Number(details.filesCompleted);
+  const total = Number(details.filesTotal);
+  const failed = Number(details.filesFailed) || 0;
+
+  if (Number.isFinite(completed) && Number.isFinite(total) && total > 0) {
+    const base = `${Math.min(completed, total)}/${total} files`;
+    return failed > 0 ? `${base}, ${failed} failed` : base;
+  }
+
+  if (Number.isFinite(total) && total > 0) {
+    return `${total} ${total === 1 ? "file" : "files"}`;
   }
 
   return "";
 }
 
+function getCurrentFileMeta(details = {}) {
+  const currentFile = String(details.currentFile || "").trim();
+  if (!currentFile || details.status === "complete") return "";
+  return `Now: ${currentFile}`;
+}
+
 function formatBytes(bytes) {
-  return window.GitDownerShared?.formatBytes(bytes) || "";
+  return window.GitHubSmartDownloaderShared?.formatBytes(bytes) || "";
 }
 
 // Injects global styles for GitHub Smart Downloader UI components.
@@ -521,6 +532,19 @@ function injectStyles() {
       display: flex;
       align-items: center;
       gap: 8px;
+    }
+
+    .gd-floating-bar-summary {
+      display: grid;
+      gap: 3px;
+      min-width: 150px;
+    }
+
+    .gd-floating-bar-estimate {
+      color: #8b949e;
+      font-size: 11px;
+      line-height: 1.25;
+      white-space: nowrap;
     }
     
     .gd-floating-bar-count-num {
@@ -658,8 +682,229 @@ function injectStyles() {
     html[data-grd-button-style="pill"] #grd-download-btn .grd-main-download-link {
       border-radius: 12px;
     }
+
+    .gsd-onboarding-target {
+      outline: 2px solid var(--gd-accent, #8b5cf6) !important;
+      outline-offset: 3px !important;
+      box-shadow: 0 0 0 6px rgba(139, 92, 246, 0.16) !important;
+      box-shadow: 0 0 0 6px color-mix(in srgb, var(--gd-accent, #8b5cf6) 16%, transparent) !important;
+      border-radius: 8px !important;
+    }
+
+    .gsd-onboarding-panel {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      width: min(340px, calc(100vw - 32px));
+      z-index: 999999;
+      padding: 14px;
+      background: var(--color-canvas-overlay, #161b22);
+      color: var(--color-fg-default, #c9d1d9);
+      border: 1px solid var(--color-border-default, #30363d);
+      border-radius: 8px;
+      box-shadow: 0 16px 44px rgba(1, 4, 9, 0.32);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    }
+
+    .gsd-onboarding-panel__top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .gsd-onboarding-panel__label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--gd-accent, #8b5cf6);
+    }
+
+    .gsd-onboarding-panel__close {
+      width: 28px;
+      height: 28px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--color-fg-muted, #8b949e);
+      cursor: pointer;
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .gsd-onboarding-panel__close:hover,
+    .gsd-onboarding-panel__close:focus-visible {
+      border-color: var(--color-border-default, #30363d);
+      background: var(--color-neutral-muted, rgba(110, 118, 129, 0.12));
+      color: var(--color-fg-default, #c9d1d9);
+    }
+
+    .gsd-onboarding-panel h2 {
+      margin: 0 0 10px;
+      color: var(--color-fg-default, #c9d1d9);
+      font-size: 16px;
+      line-height: 1.25;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    .gsd-onboarding-panel ol {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 9px;
+    }
+
+    .gsd-onboarding-panel li {
+      display: grid;
+      grid-template-columns: 20px 1fr;
+      gap: 9px;
+      align-items: start;
+    }
+
+    .gsd-onboarding-panel__num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 6px;
+      background: rgba(139, 92, 246, 0.14);
+      background: color-mix(in srgb, var(--gd-accent, #8b5cf6) 18%, transparent);
+      color: var(--gd-accent, #8b5cf6);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .gsd-onboarding-panel strong {
+      display: block;
+      color: var(--color-fg-default, #c9d1d9);
+      font-size: 13px;
+      line-height: 1.25;
+    }
+
+    .gsd-onboarding-panel__copy > span {
+      color: var(--color-fg-muted, #8b949e);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .gsd-onboarding-panel__done {
+      width: 100%;
+      margin-top: 12px;
+      height: 34px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 6px;
+      background: var(--gd-accent, #8b5cf6);
+      color: #fff;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .gsd-onboarding-panel__done:hover,
+    .gsd-onboarding-panel__done:focus-visible {
+      filter: brightness(1.08);
+    }
+
   `;
   document.head.appendChild(style);
+}
+
+function maybeShowPageOnboarding() {
+  if (
+    !isRepoPage() ||
+    !isContextValid() ||
+    document.getElementById("gsd-onboarding-panel")
+  ) {
+    return;
+  }
+
+  const mainButton = document.querySelector(
+    '#grd-download-btn, [data-grd-main-download="true"]',
+  );
+  const rowControl = document.querySelector(
+    ".grd-checkbox-wrapper, .custom-inline-checkbox, .grd-select-all-checkbox, .select-all-checkbox",
+  );
+
+  if (!mainButton && !rowControl) return;
+
+  chrome.storage.local.get({ [PAGE_ONBOARDING_KEY]: false }, (result) => {
+    if (result[PAGE_ONBOARDING_KEY] || !isRepoPage()) return;
+    renderPageOnboarding(mainButton, rowControl);
+  });
+}
+
+function renderPageOnboarding(mainButton, rowControl) {
+  removePageOnboarding();
+
+  if (mainButton) {
+    mainButton.classList.add("gsd-onboarding-target");
+  }
+  if (rowControl) {
+    rowControl.classList.add("gsd-onboarding-target");
+  }
+
+  const panel = document.createElement("aside");
+  panel.id = "gsd-onboarding-panel";
+  panel.className = "gsd-onboarding-panel";
+  panel.setAttribute("role", "region");
+  panel.setAttribute("aria-label", "GitHub Smart Downloader quick start");
+  panel.innerHTML = `
+    <div class="gsd-onboarding-panel__top">
+      <span class="gsd-onboarding-panel__label">Quick start</span>
+      <button class="gsd-onboarding-panel__close" type="button" aria-label="Dismiss quick start">&times;</button>
+    </div>
+    <h2>GitHub Smart Downloader</h2>
+    <ol>
+      <li>
+        <span class="gsd-onboarding-panel__num">1</span>
+        <span class="gsd-onboarding-panel__copy">
+          <strong>Use the download button</strong>
+          <span>Download the repo or the folder you are viewing.</span>
+        </span>
+      </li>
+      <li>
+        <span class="gsd-onboarding-panel__num">2</span>
+        <span class="gsd-onboarding-panel__copy">
+          <strong>Select files and folders</strong>
+          <span>Pick rows, then use the selected-items bar.</span>
+        </span>
+      </li>
+      <li>
+        <span class="gsd-onboarding-panel__num">3</span>
+        <span class="gsd-onboarding-panel__copy">
+          <strong>Add a token only when needed</strong>
+          <span>Add one in settings for private repos or higher API limits.</span>
+        </span>
+      </li>
+    </ol>
+    <button class="gsd-onboarding-panel__done" type="button">Got it</button>
+  `;
+
+  panel
+    .querySelector(".gsd-onboarding-panel__close")
+    .addEventListener("click", dismissPageOnboarding);
+  panel
+    .querySelector(".gsd-onboarding-panel__done")
+    .addEventListener("click", dismissPageOnboarding);
+
+  document.body.appendChild(panel);
+}
+
+function dismissPageOnboarding() {
+  chrome.storage.local.set({ [PAGE_ONBOARDING_KEY]: true });
+  removePageOnboarding();
+}
+
+function removePageOnboarding() {
+  document.getElementById("gsd-onboarding-panel")?.remove();
+  document
+    .querySelectorAll(".gsd-onboarding-target")
+    .forEach((node) => node.classList.remove("gsd-onboarding-target"));
 }
 
 function addDownloadButton() {
@@ -692,7 +937,7 @@ function addDownloadButton() {
       }
     });
   } catch (e) {
-    console.warn("[GRD] Context invalid during button injection");
+    console.warn("[GSD] Context invalid during button injection");
   }
 }
 
@@ -716,7 +961,7 @@ function injectIntegratedButton(settings) {
   downloadLink.className = "grd-main-download-link";
   downloadLink.innerText = "Download";
 
-  // Style reset to match nav bar exactly as requested
+  // Reset styles so the link inherits GitHub's repository nav.
   Object.assign(downloadLink.style, {
     background: "none",
     backgroundColor: "transparent",
@@ -947,7 +1192,7 @@ function getRowItemInfo(row) {
   const name = nameLink.textContent.trim();
   const href = nameLink.getAttribute("href") || "";
   return (
-    window.GitDownerShared?.getSelectableGitHubItem(
+    window.GitHubSmartDownloaderShared?.getSelectableGitHubItem(
       window.location.href,
       href,
       name,
@@ -1240,9 +1485,12 @@ function createActionBar() {
   actionBar = document.createElement("div");
   actionBar.className = "gd-floating-bar";
   actionBar.innerHTML = `
-    <div class="gd-floating-bar-count">
-      <span class="gd-floating-bar-count-num">0</span>
-      <span>items selected</span>
+    <div class="gd-floating-bar-summary">
+      <div class="gd-floating-bar-count">
+        <span class="gd-floating-bar-count-num">0</span>
+        <span class="gd-floating-bar-count-label">items selected</span>
+      </div>
+      <div class="gd-floating-bar-estimate">Select items to estimate size</div>
     </div>
     <div class="gd-floating-bar-divider"></div>
     <button class="gd-action-btn gd-btn-primary grd-download-selected">
@@ -1271,13 +1519,66 @@ function updateActionBar() {
   const bar = createActionBar();
   const count = selectedItems.size;
   bar.querySelector(".gd-floating-bar-count-num").textContent = count;
-  bar.querySelector(".gd-floating-bar-count span:last-child").textContent =
+  bar.querySelector(".gd-floating-bar-count-label").textContent =
     count === 1 ? "item selected" : "items selected";
   if (count > 0) {
     bar.classList.add("grd-visible");
+    scheduleSelectionEstimate();
   } else {
     bar.classList.remove("grd-visible");
+    clearSelectionEstimate();
   }
+}
+
+function setSelectionEstimateText(text) {
+  const estimate = actionBar?.querySelector(".gd-floating-bar-estimate");
+  if (estimate) estimate.textContent = text;
+}
+
+function clearSelectionEstimate() {
+  selectionEstimateNonce++;
+  if (selectionEstimateTimer) {
+    clearTimeout(selectionEstimateTimer);
+    selectionEstimateTimer = null;
+  }
+  setSelectionEstimateText("Select items to estimate size");
+}
+
+function scheduleSelectionEstimate() {
+  const repoInfo = parseGitHubUrl(window.location.href);
+  const items = Array.from(selectedItems.values());
+  const nonce = ++selectionEstimateNonce;
+
+  if (!repoInfo || items.length === 0) {
+    clearSelectionEstimate();
+    return;
+  }
+
+  setSelectionEstimateText("Estimating source size...");
+  if (selectionEstimateTimer) clearTimeout(selectionEstimateTimer);
+  selectionEstimateTimer = setTimeout(() => {
+    safeSendMessage(
+      {
+        action: "estimateSelection",
+        repoInfo,
+        items,
+      },
+      (response) => {
+        if (nonce !== selectionEstimateNonce) return;
+        if (chrome.runtime.lastError || !response?.success) {
+          setSelectionEstimateText("Size estimate unavailable");
+          return;
+        }
+
+        const size = formatBytes(response.estimatedBytes || 0);
+        const files = Number(response.filesTotal) || 0;
+        const fileLabel = files === 1 ? "file" : "files";
+        setSelectionEstimateText(
+          `Estimated source size: ${size} across ${files} ${fileLabel}`,
+        );
+      },
+    );
+  }, 250);
 }
 
 function clearSelection() {
@@ -1530,6 +1831,7 @@ function setupObserver() {
     addDownloadButton();
     injectRowControls();
     injectInlineDownloadIcons();
+    setTimeout(maybeShowPageOnboarding, 150);
   };
 
   const handleRouteChange = () => {
@@ -1542,6 +1844,7 @@ function setupObserver() {
     }
 
     buttonRenderNonce++;
+    removePageOnboarding();
     removeInjectedDownloadButtons();
 
     document.querySelectorAll('tr[data-grd-injected="true"]').forEach((row) => {
@@ -1587,6 +1890,7 @@ function setupObserver() {
       injectSelectAllControl();
       injectInlineDownloadIcons();
     }
+    setTimeout(maybeShowPageOnboarding, 150);
   }, 100);
 
   const observer = new MutationObserver(() => {
@@ -1641,4 +1945,4 @@ if (document.readyState === "loading") {
   setupKeyboardShortcuts();
 }
 
-console.log("[GRD] GitHub Repository Downloader content script loaded");
+console.log("[GSD] GitHub Smart Downloader content script loaded");

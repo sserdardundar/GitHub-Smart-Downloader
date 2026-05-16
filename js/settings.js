@@ -2,7 +2,8 @@
 (function () {
   "use strict";
 
-  const SHARED_DEFAULTS = window.GitDownerShared?.DEFAULT_SETTINGS || {
+  const SHARED_DEFAULTS = window.GitHubSmartDownloaderShared
+    ?.DEFAULT_SETTINGS || {
     themeMode: "system",
     buttonColor: "#8b5cf6",
     buttonText: "Download Repository",
@@ -608,15 +609,19 @@
     }
 
     function formatBytes(bytes) {
-      return window.GitDownerShared?.formatBytes(bytes) || "-";
+      return window.GitHubSmartDownloaderShared?.formatBytes(bytes) || "-";
     }
 
     function getRateLimitPercent(rateLimit) {
-      return window.GitDownerShared?.getRateLimitPercent(rateLimit) || 0;
+      return (
+        window.GitHubSmartDownloaderShared?.getRateLimitPercent(rateLimit) || 0
+      );
     }
 
     function formatRateLimitReset(reset) {
-      return window.GitDownerShared?.formatRateLimitReset(reset) || "-";
+      return (
+        window.GitHubSmartDownloaderShared?.formatRateLimitReset(reset) || "-"
+      );
     }
 
     function escapeHtml(str) {

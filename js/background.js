@@ -2,7 +2,7 @@ try {
   importScripts("shared.js");
   importScripts("../lib/jszip.min.js");
 } catch (e) {
-  console.error("[GRD] Dependency load failure:", e);
+  console.error("[GSD] Dependency load failure:", e);
 }
 
 const {
@@ -18,7 +18,7 @@ const {
   buildRawUrl,
   getRepoKey,
   fetchWithRetry,
-} = GitDownerShared;
+} = GitHubSmartDownloaderShared;
 
 const downloadJobs = new Map();
 const activeToasts = new Map();
@@ -48,7 +48,7 @@ function refreshConfigFromSettings() {
       CONFIG.MAX_CACHE_MEMORY_BYTES = settings.maxCacheSize * 1024 * 1024;
       CONFIG.MAX_MEMORY_ZIP_SIZE = settings.maxCacheSize * 2.5 * 1024 * 1024;
       console.log(
-        `[GRD] Memory Limits Updated: Cache=${settings.maxCacheSize}MB, ZIP=${Math.round(settings.maxCacheSize * 2.5)}MB`,
+        `[GSD] Memory Limits Updated: Cache=${settings.maxCacheSize}MB, ZIP=${Math.round(settings.maxCacheSize * 2.5)}MB`,
       );
     }
   });
@@ -71,7 +71,7 @@ chrome.storage.local.get(["hotArchivesMetadata"], (result) => {
       }
     }
     console.log(
-      `[GRD] Restored ${hotArchives.size} archives from persistent metadata.`,
+      `[GSD] Restored ${hotArchives.size} archives from persistent metadata.`,
     );
   }
 });
@@ -116,7 +116,7 @@ function createDownloadJob(source, tabId = null, jobId = null) {
   job.repoInfo = null;
   downloadJobs.set(job.id, job);
   latestJobId = job.id;
-  console.log(`[GRD] Job created: ${job.id} for Tab: ${tabId}`);
+  console.log(`[GSD] Job created: ${job.id} for Tab: ${tabId}`);
   return job;
 }
 
@@ -177,6 +177,14 @@ function updateProgress(job, status, message, progress = 0, details = {}) {
       patch.sizeBytes = details.sizeBytes;
     if (Object.prototype.hasOwnProperty.call(details, "bytesDownloaded"))
       patch.bytesDownloaded = details.bytesDownloaded;
+    if (Object.prototype.hasOwnProperty.call(details, "filesTotal"))
+      patch.filesTotal = details.filesTotal;
+    if (Object.prototype.hasOwnProperty.call(details, "filesCompleted"))
+      patch.filesCompleted = details.filesCompleted;
+    if (Object.prototype.hasOwnProperty.call(details, "filesFailed"))
+      patch.filesFailed = details.filesFailed;
+    if (Object.prototype.hasOwnProperty.call(details, "currentFile"))
+      patch.currentFile = details.currentFile;
     updateJobState(job, patch);
 
     const payload = {
@@ -189,10 +197,14 @@ function updateProgress(job, status, message, progress = 0, details = {}) {
       estimatedBytes: job.state.estimatedBytes,
       bytesDownloaded: job.state.bytesDownloaded,
       sizeBytes: job.state.sizeBytes,
+      filesTotal: job.state.filesTotal,
+      filesCompleted: job.state.filesCompleted,
+      filesFailed: job.state.filesFailed,
+      currentFile: job.state.currentFile,
     };
 
     console.log(
-      `[GRD] Dispatching update for ${job.id} (Tab: ${job.tabId || "NONE"}):`,
+      `[GSD] Dispatching update for ${job.id} (Tab: ${job.tabId || "NONE"}):`,
       status,
       message,
     );
@@ -204,13 +216,13 @@ function updateProgress(job, status, message, progress = 0, details = {}) {
         .sendMessage(job.tabId, { ...payload, ...uiDetails })
         .catch((err) => {
           console.warn(
-            `[GRD] Failed to send to tab ${job.tabId}:`,
+            `[GSD] Failed to send to tab ${job.tabId}:`,
             err.message,
           );
         });
     }
   } catch (error) {
-    console.error("[GRD] Critical error in updateProgress:", error);
+    console.error("[GSD] Critical error in updateProgress:", error);
   }
 }
 
@@ -224,7 +236,7 @@ async function triggerClientDownload(job, blob, filename) {
       });
       return true;
     } catch (e) {
-      console.warn("[GRD] Could not send to tab, falling back to data URL:", e);
+      console.warn("[GSD] Could not send to tab, falling back to data URL:", e);
     }
   }
 
@@ -246,7 +258,7 @@ async function ensureOffscreenDocument() {
     if (contexts.length > 0) return;
   } catch (e) {
     console.warn(
-      "[GRD] getContexts failed, attempting to create offscreen document anyway.",
+      "[GSD] getContexts failed, attempting to create offscreen document anyway.",
     );
   }
 
@@ -296,14 +308,14 @@ async function fetchLatestCommitSha(owner, repo, ref = "HEAD", token = null) {
 
 async function fetchRepositoryMetadata(owner, repo, token = null, job = null) {
   try {
-    console.log(`[GRD] Fetching repository metadata for ${owner}/${repo}...`);
+    console.log(`[GSD] Fetching repository metadata for ${owner}/${repo}...`);
     const url = `https://api.github.com/repos/${owner}/${repo}`;
     const response = await fetchWithRetry(url, token, {
       signal: job?.controller?.signal,
     });
     const data = await response.json();
     console.log(
-      `[GRD] Metadata resolved. Default branch: ${data.default_branch}, Size: ${data.size}KB`,
+      `[GSD] Metadata resolved. Default branch: ${data.default_branch}, Size: ${data.size}KB`,
     );
     return {
       defaultBranch: data.default_branch || "main",
@@ -311,7 +323,7 @@ async function fetchRepositoryMetadata(owner, repo, token = null, job = null) {
     };
   } catch (error) {
     console.warn(
-      `[GRD] Metadata fetch failed, falling back to defaults:`,
+      `[GSD] Metadata fetch failed, falling back to defaults:`,
       error,
     );
     return { defaultBranch: "main", size: 0 };
@@ -497,9 +509,7 @@ async function downloadDirectory(repoInfo, settings, job) {
   // Collaborative Optimization: Check if a shared archive is already available or downloading
   const repoKey = getRepoKey(repoInfo, token);
   if (hotArchives.has(repoKey) || pendingArchives.has(repoKey)) {
-    console.log(
-      `[GRD] Hot/Pending Archive detected for ${repoKey}. Using Surgical Extraction.`,
-    );
+    console.log(`[GSD] Reusing archive cache for ${repoKey}.`);
     return await downloadFilteredRepository(repoInfo, settings, [], job, [
       basePath,
     ]);
@@ -531,7 +541,7 @@ async function downloadDirectory(repoInfo, settings, job) {
 
 async function downloadFullRepository(repoInfo, settings, job) {
   console.log(
-    `[GRD] Starting Full Repository download via Offscreen engine for cache population.`,
+    `[GSD] Starting Full Repository download via Offscreen engine for cache population.`,
   );
   return await downloadFilteredRepository(repoInfo, settings, [], job);
 }
@@ -568,6 +578,63 @@ async function downloadFilteredRepository(
   return { success: true, jobId: job.id };
 }
 
+async function estimateSelectionSize(repoInfo, items, token) {
+  const selectedPaths = (items || [])
+    .map((item) => String(item.path || "").replace(/^\/+|\/+$/g, ""))
+    .filter(Boolean);
+
+  if (!repoInfo || selectedPaths.length === 0) {
+    return { estimatedBytes: 0, filesTotal: 0 };
+  }
+
+  let ref = repoInfo.ref || "HEAD";
+  if (ref === "HEAD" || !repoInfo.ref) {
+    const metadata = await fetchRepositoryMetadata(
+      repoInfo.owner,
+      repoInfo.repo,
+      token,
+    );
+    ref = metadata.defaultBranch;
+  }
+
+  const headers = {
+    Accept: "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+  };
+  if (token) headers.Authorization = `token ${token}`;
+
+  const url = `${CONFIG.BASE_API_URL}/${repoInfo.owner}/${repoInfo.repo}/git/trees/${ref}?recursive=1`;
+  const response = await fetch(url, { headers });
+  if (!response.ok) {
+    throw new Error(`GitHub returned ${response.status}`);
+  }
+
+  const data = await response.json();
+  const tree = Array.isArray(data.tree) ? data.tree : [];
+  let estimatedBytes = 0;
+  let filesTotal = 0;
+
+  for (const entry of tree) {
+    if (entry.type !== "blob" || !entry.path) continue;
+    const isSelected = selectedPaths.some(
+      (selectedPath) =>
+        entry.path === selectedPath ||
+        entry.path.startsWith(`${selectedPath}/`),
+    );
+    if (!isSelected) continue;
+    filesTotal++;
+    if (typeof entry.size === "number" && Number.isFinite(entry.size)) {
+      estimatedBytes += entry.size;
+    }
+  }
+
+  return {
+    estimatedBytes,
+    filesTotal,
+    truncated: Boolean(data.truncated),
+  };
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const { action } = message;
 
@@ -576,27 +643,50 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       jobId,
       completed,
       total,
-      currentFile,
       status,
       message: msg,
       progress,
+      estimatedBytes,
+      bytesDownloaded,
+      sizeBytes,
+      filesCompleted,
+      filesTotal,
+      filesFailed,
+      currentFile,
     } = message;
     const job = downloadJobs.get(jobId);
     if (job) {
+      const detailPatch = Object.fromEntries(
+        Object.entries({
+          estimatedBytes,
+          bytesDownloaded,
+          sizeBytes,
+          filesCompleted,
+          filesTotal,
+          filesFailed,
+          currentFile,
+        }).filter(([, value]) => value !== undefined),
+      );
       if (status === "enumerating") {
         updateProgress(
           job,
           "enumerating",
           msg || "Scanning repository...",
           progress || 10,
+          detailPatch,
         );
         return false;
       }
       if (status === "complete") {
-        updateProgress(job, "complete", msg || "Download complete!", 100);
         const size = message.size || job.state.sizeBytes || 0;
         const count = message.count || job.state.filesCompleted || "Unknown";
         const ri = message.repoInfo || job.repoInfo;
+        updateProgress(job, "complete", msg || "Download complete!", 100, {
+          sizeBytes: size,
+          bytesDownloaded: size,
+          filesCompleted: Number(count) || job.state.filesCompleted,
+          filesTotal: Number(count) || job.state.filesTotal,
+        });
 
         if (ri) {
           addToHistory({
@@ -612,7 +702,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return false;
       }
       if (status === "downloading" || status === "zipping") {
-        updateProgress(job, status, msg || "Processing...", progress || 50);
+        updateProgress(
+          job,
+          status,
+          msg || "Processing...",
+          progress || 50,
+          detailPatch,
+        );
         return false;
       }
 
@@ -623,9 +719,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           "downloading",
           `Downloading ${completed}/${total} files...`,
           percent,
+          {
+            filesCompleted: completed,
+            filesTotal: total,
+            currentFile,
+            estimatedBytes,
+          },
         );
         if (completed === total)
-          updateProgress(job, "zipping", "Finalizing ZIP package...", 95);
+          updateProgress(job, "zipping", "Finalizing ZIP package...", 95, {
+            filesCompleted: completed,
+            filesTotal: total,
+          });
       }
       return false;
     }
@@ -645,6 +750,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       pendingArchives.add(repoKey);
     }
     return false;
+  }
+
+  if (action === "estimateSelection") {
+    chrome.storage.sync.get(DEFAULT_SETTINGS, async (settings) => {
+      try {
+        const token = await decryptStoredTokenOrThrow(settings.githubToken);
+        const estimate = await estimateSelectionSize(
+          message.repoInfo,
+          message.items,
+          token,
+        );
+        sendResponse({ success: true, ...estimate });
+      } catch (error) {
+        sendResponse({ success: false, error: error.message });
+      }
+    });
+    return true;
   }
 
   if (action === "planStrategy") {
@@ -695,7 +817,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             hasCachedArchive = true;
           } else {
             console.log(
-              `[GRD] Cache invalidated for ${repoKey}: SHA mismatch (${cached.sha} vs ${latestSha})`,
+              `[GSD] Cache invalidated for ${repoKey}: SHA mismatch (${cached.sha} vs ${latestSha})`,
             );
             hotArchives.delete(repoKey);
             chrome.runtime
@@ -707,7 +829,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
       }
 
-      const plan = GitDownerShared.planDownloadStrategy({
+      const plan = GitHubSmartDownloaderShared.planDownloadStrategy({
         ...input,
         hasCachedArchive,
         isArchivePending,
@@ -830,7 +952,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           settings.githubToken,
         );
         const namingPolicy = settings.namingPolicy || "fullPath";
-        job.filename = GitDownerShared.generateZipFilename(
+        job.filename = GitHubSmartDownloaderShared.generateZipFilename(
           repoInfo,
           namingPolicy,
         );
@@ -863,7 +985,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           sendResponse({ success: false, error: "Cancelled", jobId: job.id });
           return;
         }
-        console.error("[GRD] Download error:", error);
+        console.error("[GSD] Download error:", error);
         const errorMsg =
           error.message ||
           (typeof error === "string" ? error : "Internal extension error");
@@ -911,7 +1033,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         let filename =
           items.length === 1 && items[0].type === "file"
             ? sanitizeFilename(`${items[0].name}.zip`)
-            : GitDownerShared.generateZipFilename(repoInfo, namingPolicy);
+            : GitHubSmartDownloaderShared.generateZipFilename(
+                repoInfo,
+                namingPolicy,
+              );
         job.filename = filename;
 
         const repoKey = getRepoKey(repoInfo, settings.githubToken);
